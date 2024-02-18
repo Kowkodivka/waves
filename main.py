@@ -1,80 +1,84 @@
 import pygame
 import sys
-import math
 
 FPS = 60
-WIDTH, HEIGHT = 680, 480
+WIDTH, HEIGHT = 400, 400
+SCALE = 3
 
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
+DECAY_FACTOR = 0.95 # Коэффициент затухания
 
-K = 0.5
-M = 100
-D = 0.5 
-
-particles = []
+particles = [[None for _ in range(HEIGHT // SCALE)] for _ in range(WIDTH // SCALE)]
 
 class Particle:
     def __init__(self, x, y):
         self.pos = [x, y]
-        self.vel = [0, 0]
+        self.vel = 0
+        self.height = 0
+        self.acceleration = 0.1
+        self.mass = 1
 
-def find_angle(particle, other_particle):
-    delta_y = other_particle.pos[1] - particle.pos[1]
-    angle_rad = math.atan2(delta_y, 0)
-    angle_deg = math.degrees(angle_rad)
-    
-    return angle_deg
+def get_coordinates_around(particle):
+    coordinates_around = []
+    for y in range(particle.pos[1] - 1, particle.pos[1] + 2):
+        for x in range(particle.pos[0] - 1, particle.pos[0] + 2):
+            if (x, y) != (particle.pos[0], particle.pos[1]):
+                try:
+                    coordinates_around.append(particles[x][y].height)
+                except IndexError:
+                    continue
+    return coordinates_around
 
-def logic(s):
-    for i in range(len(particles)):
-        acc = [0, 0]
-        particle = particles[i]
+def logic():
+    for y in range(HEIGHT // SCALE):
+        for x in range(WIDTH // SCALE):
+            particle = particles[x][y]
+            others = get_coordinates_around(particle)
+            medium_h = sum(others) / len(others)
+            delta_h = medium_h - particle.height
+            particle.vel += delta_h * particle.acceleration * particle.mass
+            particle.vel *= DECAY_FACTOR  # Применяем затухание к скорости
+            particle.height += particle.vel
 
-        if i == 0:
-            other_particle = particles[i + 1]
-            angle = find_angle(particles[0], particles[1])
-            acc[1] += K * (abs(other_particle.pos[1] - particle.pos[1]) - s) * math.sin(angle) / M
-        elif i == len(particles) - 1:
-            prev_particle = particles[i - 1]
-            angle = find_angle(prev_particle, particle)
-            acc[1] += K * (abs(prev_particle.pos[1] - particle.pos[1]) - s) * math.sin(angle) / M
-        else:
-            prev_particle = particles[i - 1]
-            next_particle = particles[i + 1]
-
-            angle_prev = find_angle(prev_particle, particle)
-            angle_next = find_angle(particle, next_particle)
-
-            acc[1] += K * (abs(prev_particle.pos[1] - particle.pos[1]) - s) * math.sin(angle_prev) / M
-            acc[1] += K * (abs(next_particle.pos[1] - particle.pos[1]) - s) * math.sin(angle_next) / M
-
-        particle.vel[1] += acc[1]
-        particle.vel[1] *= D
-        particle.pos[1] += particle.vel[1]
+def interpolate_color(value):
+    if value <= 0:
+        return (0, 0, 0)
+    elif value >= 255:
+        return (255, 255, 255)
+    else:
+        return (value, value, value)
 
 def draw(screen):
-    for particle in particles:
-        pygame.draw.circle(screen, BLACK, (int(particle.pos[0]), int(particle.pos[1])), 1)
-        
+    for i in range(HEIGHT // SCALE):
+        for j in range(WIDTH // SCALE):
+            particle = particles[j][i]
+            color_value = int(128 + particle.height * SCALE)
+            color_value = max(0, min(255, color_value))
+            color = interpolate_color(color_value)
+            pygame.draw.rect(screen, color, (j * SCALE, i * SCALE, SCALE, SCALE))
+
 def main():
+    global WIDTH, HEIGHT
+
     pygame.init()
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
     pygame.display.set_caption("waves")
     clock = pygame.time.Clock()
 
-    num_particles = 50
-    spacing = 10
+    for i in range(HEIGHT // SCALE):
+        for j in range(WIDTH // SCALE):
+            particles[j][i] = Particle(j, i)
 
-    total_width = num_particles * spacing
-    start_x = (WIDTH - total_width) // 2 + spacing // 2
+    for j in range(WIDTH // SCALE):
+        particles[j][HEIGHT // (SCALE*4)].height = -1000
 
-    for i in range(num_particles):
-        x = start_x + i * spacing
-        y = HEIGHT // 2
-        particles.append(Particle(x, y))
-
-    particles[0].pos[1] += 1
+    for j in range(WIDTH // SCALE):
+        for offset in range(10):
+            if j == WIDTH // (SCALE*2) + offset or j == WIDTH // (SCALE*2) - offset:
+                particles[j][HEIGHT // (SCALE*-2)].mass = 1
+            else:
+                particles[j][HEIGHT // (SCALE*-2)].mass = 0
 
     while True:
         for event in pygame.event.get():
@@ -82,11 +86,16 @@ def main():
                 pygame.quit()
                 sys.exit()
 
-        screen.fill(WHITE)
-        logic(spacing)
+            if event.type == pygame.VIDEORESIZE:
+                WIDTH = event.w
+                HEIGHT = event.h
+                screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
+
+        screen.fill(BLACK)
+        logic()
         draw(screen)
         pygame.display.flip()
-        clock.tick(FPS)
+        # clock.tick(FPS)
 
 if __name__ == '__main__':
     main()
