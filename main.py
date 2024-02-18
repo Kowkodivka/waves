@@ -3,7 +3,7 @@ import sys
 
 FPS = 60
 WIDTH, HEIGHT = 400, 400
-SCALE = 3
+SCALE = 5
 
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
