@@ -7,9 +7,10 @@ SCALE = 3
 
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
-DECAY_FACTOR = 0.95 # Коэффициент затухания
+DECAY_FACTOR = 0.95
 
 particles = [[None for _ in range(HEIGHT // SCALE)] for _ in range(WIDTH // SCALE)]
+
 
 class Particle:
     def __init__(self, x, y):
@@ -18,6 +19,7 @@ class Particle:
         self.height = 0
         self.acceleration = 0.1
         self.mass = 1
+
 
 def get_coordinates_around(particle):
     coordinates_around = []
@@ -30,6 +32,7 @@ def get_coordinates_around(particle):
                     continue
     return coordinates_around
 
+
 def logic():
     for y in range(HEIGHT // SCALE):
         for x in range(WIDTH // SCALE):
@@ -38,8 +41,9 @@ def logic():
             medium_h = sum(others) / len(others)
             delta_h = medium_h - particle.height
             particle.vel += delta_h * particle.acceleration * particle.mass
-            particle.vel *= DECAY_FACTOR  # Применяем затухание к скорости
+            particle.vel *= DECAY_FACTOR
             particle.height += particle.vel
+
 
 def interpolate_color(value):
     if value <= 0:
@@ -49,6 +53,7 @@ def interpolate_color(value):
     else:
         return (value, value, value)
 
+
 def draw(screen):
     for i in range(HEIGHT // SCALE):
         for j in range(WIDTH // SCALE):
@@ -57,6 +62,7 @@ def draw(screen):
             color_value = max(0, min(255, color_value))
             color = interpolate_color(color_value)
             pygame.draw.rect(screen, color, (j * SCALE, i * SCALE, SCALE, SCALE))
+
 
 def main():
     global WIDTH, HEIGHT
@@ -71,14 +77,14 @@ def main():
             particles[j][i] = Particle(j, i)
 
     for j in range(WIDTH // SCALE):
-        particles[j][HEIGHT // (SCALE*4)].height = -1000
+        particles[j][HEIGHT // (SCALE * 4)].height = -1000
 
     for j in range(WIDTH // SCALE):
         for offset in range(10):
-            if j == WIDTH // (SCALE*2) + offset or j == WIDTH // (SCALE*2) - offset:
-                particles[j][HEIGHT // (SCALE*-2)].mass = 1
+            if j == WIDTH // (SCALE * 2) + offset or j == WIDTH // (SCALE * 2) - offset:
+                particles[j][HEIGHT // (SCALE * -2)].mass = 1
             else:
-                particles[j][HEIGHT // (SCALE*-2)].mass = 0
+                particles[j][HEIGHT // (SCALE * -2)].mass = 0
 
     while True:
         for event in pygame.event.get():
@@ -97,5 +103,6 @@ def main():
         pygame.display.flip()
         # clock.tick(FPS)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
